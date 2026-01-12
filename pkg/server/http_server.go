@@ -25,11 +25,12 @@ import (
 // HTTPServer is a http server instance that listens both
 // TLS and Non-TLS based servers.
 type HTTPServer struct {
-	options       *Options
-	tlsserver     http.Server
-	nontlsserver  http.Server
-	customBanner  string
-	staticHandler http.Handler
+	options         *Options
+	tlsserver       http.Server
+	nontlsserver    http.Server
+	customBanner    string
+	defaultResponse string
+	staticHandler   http.Handler
 }
 
 type noopLogger struct {
@@ -63,10 +64,20 @@ func NewHTTPServer(options *Options) (*HTTPServer, error) {
 	// If custom index, read the custom index file and serve it.
 	// Supports {DOMAIN} placeholders.
 	if options.HTTPIndex != "" {
-		abs, _ := filepath.Abs(options.HTTPDirectory)
+		abs, _ := filepath.Abs(options.HTTPIndex)
 		gologger.Info().Msgf("Using custom server index: %s", abs)
 		if data, err := os.ReadFile(options.HTTPIndex); err == nil {
 			server.customBanner = string(data)
+		}
+	}
+	// If default response file is specified, read it and serve for all requests.
+	// This takes priority over all other response options.
+	// Supports {DOMAIN} placeholders.
+	if options.DefaultHTTPResponseFile != "" {
+		abs, _ := filepath.Abs(options.DefaultHTTPResponseFile)
+		gologger.Info().Msgf("Using default HTTP response file for all requests: %s", abs)
+		if data, err := os.ReadFile(options.DefaultHTTPResponseFile); err == nil {
+			server.defaultResponse = string(data)
 		}
 	}
 	router := &http.ServeMux{}
@@ -255,6 +266,13 @@ func (h *HTTPServer) defaultHandler(w http.ResponseWriter, req *http.Request) {
 	}
 
 	reflection := h.options.URLReflection(req.Host)
+
+	// If default response is set, serve it for all requests (highest priority)
+	if h.defaultResponse != "" {
+		_, _ = fmt.Fprint(w, strings.ReplaceAll(h.defaultResponse, "{DOMAIN}", domain))
+		return
+	}
+
 	if stringsutil.HasPrefixI(req.URL.Path, "/s/") && h.staticHandler != nil {
 		if h.options.DynamicResp && len(req.URL.Query()) > 0 {
 			values := req.URL.Query()

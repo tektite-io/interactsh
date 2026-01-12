@@ -58,6 +58,7 @@ type CLIServerOptions struct {
 	DisableUpdateCheck       bool
 	NoVersionHeader          bool
 	HeaderServer             string
+	DefaultHTTPResponseFile  string
 }
 
 func (cliServerOptions *CLIServerOptions) AsServerOptions() *server.Options {
@@ -112,6 +113,7 @@ func (cliServerOptions *CLIServerOptions) AsServerOptions() *server.Options {
 		EnableMetrics:            cliServerOptions.EnableMetrics,
 		NoVersionHeader:          cliServerOptions.NoVersionHeader,
 		HeaderServer:             cliServerOptions.HeaderServer,
+		DefaultHTTPResponseFile:  cliServerOptions.DefaultHTTPResponseFile,
 	}
 }
 
